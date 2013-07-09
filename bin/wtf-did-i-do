@@ -1,0 +1,58 @@
+#!/bin/bash
+
+function usage() {
+  echo 'Usage: what-did-i-do {options}'
+  echo
+  echo 'OPTIONS:'
+  echo "    -a   author/committer; '' is allowed (defaults to $USER)"
+  echo '    -s   since such date         (defaults to 7.days.ago)'
+  echo '    -u   until such date         (defaults to today)'
+  echo '    -m   directories max depth recurse (defaults to 1)'
+  echo
+  echo '-s and -u accepts any Git date: 2013-03-01, 7.days.ago, today, yesterday'
+  exit 0
+}
+
+SINCE='7.days.ago'
+UNTIL='today'
+AUTHOR=carsique
+MAXDEPTH=1
+
+while getopts “ha:s:u:m:” OPTION
+do
+  case $OPTION in
+    h)
+      usage
+      exit 1
+        ;;
+    a)
+      AUTHOR=$OPTARG
+      [ -z "$AUTHOR" ] && AUTHOR_OUTPUT='%an'
+      ;;
+    s)
+      SINCE=$OPTARG
+      ;;
+    u)
+      UNTIL=$OPTARG
+      ;;
+    m)
+      MAXDEPTH=$OPTARG
+      ;;
+    ?)
+      usage
+      exit
+      ;;
+  esac
+done
+
+RCol='\e[0m' ; Gre='\e[0;32m'; Red='\e[0;31m'; Yel='\e[0;33m'; BBlu='\e[1;34m';
+echo -e "  ${Gre}Authored${RCol}  | Committed  | ${Red}Abb. hash${RCol}, ${Yel}ref names${RCol} and ${BBlu}subject${RCol}"
+for D in $(find . -maxdepth $MAXDEPTH -type d); do
+  if [ -d "$D/.git" ]; then
+    cd $D
+    log=$(git log --no-merges --decorate --pretty=tformat:"%Cgreen%ad $AUTHOR_OUTPUT%Creset | %cd | %Cred%h%Creset %C(yellow)%d%Creset %C(bold blue)%s%Creset" --date-order --date=short --since=$SINCE --until=$UNTIL --author="$AUTHOR" --color 2>&1)
+    cd - >/dev/null
+    [ ! -z "$log" ] && echo -e "\n$D\n$log"
+  fi
+done
+
